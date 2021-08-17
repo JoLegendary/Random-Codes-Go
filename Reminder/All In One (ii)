@@ -14,7 +14,7 @@ Command number must strictly be unique and a number */}}
 Must be the same as above but instead 
 No. (cslice "Command" "Alias1" "Alias2") 
 "all" must strictly be the last one 
-and have 1 higher than the last number */}} 
+and be 1 higher than the last number */}} 
 {{$reset := dict
 1 (cslice "a" "arena")
 7 "all"}}
