@@ -1,0 +1,38 @@
+{{/* 
+	Trigger type: Regex
+	Trigger name: \A(?:\;)\s*(?:a(?:rena)?)(?: +|\z)
+	You can change the ";" in the regex to suit your prefix
+	as well as the "a(?:rena)?" as your command name
+*/}}
+
+{{/* Expandable reminder, to add more type
+`Regex of command` (cslice <command name> <duration(in seconds)> <Command number>) 
+Below
+Note: Command number must strictly be unique */}} 
+{{$slice := dict 
+`;a(?:rena)?(?: +|\z)` (cslice ";arena" "2700" "1")}}
+
+{{/* Actual code, don't touch if you don't know what it does */}} 
+{{$command := 0}}
+{{$cmds := ""}} 
+{{$delay := ""}} 
+{{$channel := .Channel.ID}}
+{{$remind := true}}
+{{if not .ExecData}}
+	{{$cmd := .Cmd|lower}}
+	{{range $regex, $v := $slice}}
+		{{$cmds = (index $v 0)}}
+		{{$delay = (toInt (index $v 1))}}
+		{{$command = (toInt (index $v 2))}}
+		{{if reFind $regex $cmd}} 
+			{{with dbGet $.User.ID (print "Remind" $command)}} 
+				{{print "You can " .Value.command " at **`" ((.ExpiresAt.Add (toDuration "8h")).Format "3:04 PM") "`** \nAfter `" (.ExpiresAt.Sub currentTime|humanizeDurationSeconds) "`."| cembed "color" (randInt 16777216) "author" (sdict "icon_url" (.Value.avatar) "name" .Value.string) "description"| sendMessage nil}}
+			{{else}}
+				{{scheduleUniqueCC $.CCID nil $delay  (print $.User.ID " for " $command)  (sdict "id" $.User.ID "avatar" ($.User.AvatarURL "1024") "command" $cmds "channel" $channel)}}
+				{{dbSetExpire $.User.ID (print "Remind" $command) (sdict "command" $cmds "avatar" ($.User.AvatarURL "1024") "string" $.User.String) $delay}}
+			{{end}} 
+		{{end}} 
+	{{end}} 
+{{else}}
+	{{print "You can **" .ExecData.command "** now!"| cembed "author" (sdict "name" "Reminder!" "icon_url"  .ExecData.avatar) "color" (randInt 16777216) "description"|complexMessage "content" (print "<@" .ExecData.id ">") "embed"| sendMessageNoEscape .ExecData.channel}}
+{{end}}
