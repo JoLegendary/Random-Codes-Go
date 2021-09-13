@@ -28,7 +28,7 @@
 	{{else}}
 		{{$cc = exec "cc" .StrippedMsg}}
 	{{end}}
-	{{if not (reFind `\A(No id or trigger provided, here is a list of all server commands\:|No command by that name or id found, here is a list of them all\:)` $cc)}}
+	{{if not (reFind `\A(No id or trigger provided, here is a list of all server commands\:|No command by that name or id found, here is a list of them all\:|More than 1 matched command)` $cc)}}
 		{{if $true}}
 			{{$c := split $cc "\n"}}
 			{{$code := len $c|add -1|slice $c 2|joinStr "\n"}}
