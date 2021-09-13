@@ -1,4 +1,9 @@
 {{/* 
+	BSD 3-Clause License
+
+	Copyright (c) 2021, JoLegendary
+	All rights reserved.
+
 	Trigger Type: Regex
 	Trigger: \A((?:\-)\s*(set|reset)|(?:\;)\s*(?:a(?:rena)?))(?: +|\z)
 	Replace ";" with the prefix you want and add on with "|" as the seperator
