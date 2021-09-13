@@ -1,5 +1,5 @@
 {{/*
-  	BSD 3-Clause License
+	BSD 3-Clause License
 
 	Copyright (c) 2021, JoLegendary
 	All rights reserved.
@@ -14,42 +14,61 @@
 */}}
 
 {{if .CmdArgs}}
-	{{$ccid := .StrippedMsg}}
-	{{$cc := exec "cc" $ccid}}
+	{{$true := true}}
+	{{$cc := ""}}
+	{{$color := "txt"}}
+	{{if reFind "-color" .StrippedMsg}}
+		{{$color = "go"}}
+	{{end}}
+	{{if reFind "-file" .StrippedMsg}}
+		{{$cc = exec "cc" (reReplace `\s?-(?:file|color)\s?` .StrippedMsg "")}}
+		{{$true = false}}
+	{{else if reFind "-color" .StrippedMsg}}
+		{{$cc = exec "cc" (reReplace `\s?-(?:file|color)\s?` .StrippedMsg "")}}
+	{{else}}
+		{{$cc = exec "cc" .StrippedMsg}}
+	{{end}}
 	{{if not (reFind `\A(No id or trigger provided, here is a list of all server commands\:|No command by that name or id found, here is a list of them all\:)` $cc)}}
-		{{$c := split $cc "\n"}}
-		{{$code := len $c|add -1|slice $c 2|joinStr "\n"}}
-		{{$count := split $code ""}}
-		{{$lines := split $code "\n"}}
-		{{$mcount := fdiv (len $count) 1950|roundCeil|toInt}}
-		{{$msg := cslice}}
-		{{if not (reFind "```" $code)}}
-			{{if ge $mcount 2}}
-				{{$curr := 0}}
-				{{$lcurr := 0}}
-				{{$old := 0}}
-				{{$current := 0}}
-				{{range seq 0 $mcount}}
-					{{- $curr = add $current 1950}}
-					{{- if ge $curr (len $count)}}
-						{{- $curr = len $count}}
+		{{if $true}}
+			{{$c := split $cc "\n"}}
+			{{$code := len $c|add -1|slice $c 2|joinStr "\n"}}
+			{{$count := split $code ""}}
+			{{$lines := split $code "\n"}}
+			{{$mcount := fdiv (len $count) 1950|roundCeil|toInt}}
+			{{$msg := cslice}}
+			{{if not (reFind "```" $code)}}
+				{{if ge $mcount 2}}
+					{{$curr := 0}}
+					{{$lcurr := 0}}
+					{{$old := 0}}
+					{{$current := 0}}
+					{{range seq 0 (add $mcount 5)}}
+						{{- $curr = add $current 1950}}
+						{{- if ge $curr (len $count)}}
+							{{- $curr = len $count}}
+						{{- end}}
+						{{- if ne $curr $old}}
+							{{- $line := slice $count $old $curr|joinStr ""|reFindAll `\n`|len}}
+							{{- $msgs := add $lcurr $line|slice $lines $lcurr|joinStr "\n"}}
+							{{- $msg = $msg.Append $msgs}}
+							{{- $current = split $msgs ""|len|add $current}}
+							{{- $old = $curr}}
+							{{- $lcurr = add $lcurr $line}}
+						{{- end}}
 					{{- end}}
-					{{- $line := slice $count $old $curr|joinStr ""|reFindAll `\n`|len}}
-					{{- $msgs := add $lcurr $line|slice $lines $lcurr|joinStr "\n"}}
-					{{- $msg = $msg.Append $msgs}}
-					{{- $current = split $msgs ""|len|add $current}}
-					{{- $old = $curr}}
-					{{- $lcurr = add $lcurr $line}}
+				{{else}}
+					{{$msg = joinStr "\n" $lines|$msg.Append}}
+				{{end}}
+				{{slice $c 0 1|joinStr ""|sendMessage nil}}
+				{{range $msg}}
+					{{- printf "```%s\n%s\n```" $color .|sendMessage nil}}
 				{{- end}}
 			{{else}}
-				{{$msg = joinStr "\n" $lines|$msg.Append}}
+				{{$cc|complexMessage "content" "Illegal Characters found. Use this preview file instead" "file"|sendMessage nil}}
 			{{end}}
-			{{slice $c 0 1|joinStr ""|sendMessage nil}}
-			{{range $msg}}
-				{{- printf "```txt\n%s\n```" .|sendMessage nil}}
-			{{- end}}
 		{{else}}
-			{{$cc|complexMessage "content" "Illegal Characters found. Use this preview file instead" "file"|sendMessage nil}}
+			{{$c := split $cc "\n"}}
+			{{sendMessage nil (complexMessage "content" (slice $c 0 1|joinStr "") "file" (len $c|add -1|slice $c 2|joinStr "\n"))}}
 		{{end}}
 	{{else}}
 		{{slice (split $cc "\n") 1|joinStr "\n"}}
