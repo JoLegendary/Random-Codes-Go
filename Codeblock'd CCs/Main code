@@ -21,10 +21,10 @@
 		{{$color = "go"}}
 	{{end}}
 	{{if reFind "-file" .StrippedMsg}}
-		{{$cc = exec "cc" (reReplace `\s?-(?:file|color)\s?` .StrippedMsg "")}}
+		{{$cc = exec "cc" (reReplace `\s*-(?:file|color)\s*` .StrippedMsg "")}}
 		{{$true = false}}
 	{{else if reFind "-color" .StrippedMsg}}
-		{{$cc = exec "cc" (reReplace `\s?-(?:file|color)\s?` .StrippedMsg "")}}
+		{{$cc = exec "cc" (reReplace `\s*-(?:file|color)\s*` .StrippedMsg "")}}
 	{{else}}
 		{{$cc = exec "cc" .StrippedMsg}}
 	{{end}}
