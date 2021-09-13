@@ -1,5 +1,17 @@
 {{/*
-  
+  	BSD 3-Clause License
+
+	Copyright (c) 2021, JoLegendary
+	All rights reserved.
+	
+	Trigger Type: Command
+	Trigger: cc
+	Usage: -cc/-cc <number>/-cc <name>
+	
+	Important Note: You have to override the built-in cc command in the control panel
+	
+	This command will codeblock any ccs that are 2k+ characters long to make it more visible
+*/}}
 
 {{if .CmdArgs}}
 	{{$ccid := .StrippedMsg}}
@@ -39,5 +51,9 @@
 		{{else}}
 			{{$cc|complexMessage "content" "Illegal Characters found. Use this preview file instead" "file"|sendMessage nil}}
 		{{end}}
+	{{else}}
+		{{slice (split $cc "\n") 1|joinStr "\n"}}
 	{{end}}
+{{else}}
+	{{slice (split (exec "cc") "\n") 1|joinStr "\n"}}
 {{end}}
