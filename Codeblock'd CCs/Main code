@@ -12,7 +12,7 @@
 	
 	This command will codeblock any ccs that are 2k+ characters long to make it more visible
 */}}
-
+{{$true := false}}
 {{if .CmdArgs}}
 	{{$true := true}}
 	{{$cc := ""}}
@@ -74,8 +74,45 @@
 			{{sendMessage nil (complexMessage "content" (slice $c 0 1|joinStr "") "file" (len $c|add -1|slice $c 2|joinStr "\n"))}}
 		{{end}}
 	{{else}}
-		{{slice (split $cc "\n") 1|joinStr "\n"|sendMessage nil}}
+		{{$true = true}}
 	{{end}}
 {{else}}
-	{{slice (split (exec "cc") "\n") 1|joinStr "\n"|sendMessage nil}}
+	{{$true = true}}
+{{end}}
+{{/* slice (split $cc "\n") 1|joinStr "\n"|sendMessage nil */}}
+{{if $true}}
+	{{$l := split (exec "cc") "\n"}}
+	{{$list := slice $l 1|joinStr "\n"}}
+	{{$total := split $list ""}}
+	{{$ltotal := split $list "\n"}}
+	{{$ttotal := fdiv (len $total) 1950|roundCeil|toInt}}
+	{{$msg := cslice}}
+	{{if ge $ttotal 2}}
+		{{$curr := 0}}
+		{{$lcurr := 0}}
+		{{$old := 0}}
+		{{$current := 0}}
+		{{range seq 0 (add $ttotal 5)}}
+			{{- $curr = add $current 1950}}
+			{{- $next := 0}}
+			{{- if ge $curr (len $total)}}
+				{{- $curr = len $total}}
+				{{- $next = 1}}
+			{{- end}}
+			{{- if ne $curr $old}}
+				{{- $line := slice $total $old $curr|joinStr ""|reFindAll `\n`|len}}
+				{{- $next = add $lcurr $line $next}}
+				{{- $msgs := $next|slice $ltotal $lcurr|joinStr "\n"}}
+				{{- $msg = $msg.Append $msgs}}
+				{{- $current = split $msgs ""|len|add $current}}
+				{{- $old = $curr}}
+				{{- $lcurr = add $lcurr $line}}
+			{{- end}}
+		{{- end}}
+	{{else}}
+		{{$msg = joinStr "\n" $l|$msg.Append}}
+	{{end}}
+	{{range $msg}}
+		{{- sendMessage nil .}}
+	{{- end}}
 {{end}}
