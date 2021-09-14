@@ -44,12 +44,15 @@
 					{{$current := 0}}
 					{{range seq 0 (add $mcount 5)}}
 						{{- $curr = add $current 1950}}
+						{{- $next := 0}}
 						{{- if ge $curr (len $count)}}
 							{{- $curr = len $count}}
+							{{- $next = 1}}
 						{{- end}}
 						{{- if ne $curr $old}}
 							{{- $line := slice $count $old $curr|joinStr ""|reFindAll `\n`|len}}
-							{{- $msgs := add $lcurr $line|slice $lines $lcurr|joinStr "\n"}}
+							{{- $next = add $lcurr $line $next}}
+							{{- $msgs := $next|slice $lines $lcurr|joinStr "\n"}}
 							{{- $msg = $msg.Append $msgs}}
 							{{- $current = split $msgs ""|len|add $current}}
 							{{- $old = $curr}}
@@ -71,8 +74,8 @@
 			{{sendMessage nil (complexMessage "content" (slice $c 0 1|joinStr "") "file" (len $c|add -1|slice $c 2|joinStr "\n"))}}
 		{{end}}
 	{{else}}
-		{{slice (split $cc "\n") 1|joinStr "\n"}}
+		{{slice (split $cc "\n") 1|joinStr "\n"|sendMessage nil}}
 	{{end}}
 {{else}}
-	{{slice (split (exec "cc") "\n") 1|joinStr "\n"}}
+	{{slice (split (exec "cc") "\n") 1|joinStr "\n"|sendMessage nil}}
 {{end}}
