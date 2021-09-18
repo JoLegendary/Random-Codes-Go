@@ -4,115 +4,163 @@
 	Copyright (c) 2021, JoLegendary
 	All rights reserved.
 	
-	Trigger Type: Command
-	Trigger: cc
-	Usage: -cc/-cc <number>/-cc <name>
+	Trigger Type: Regex
+	Trigger: \A(?:\-|<@!?204255221017214977>)\s*(?:c(?:ustom)?c(?:ommands)?|s(erver)?h(ighlight)?)(?: +|\z)
+	Usage: -cc [number/name]/-customcommands [number/name]/-sh <syntax>/-serverhighlight <syntax>
 	
 	Important Note: You have to override the built-in cc command in the control panel
 	
 	This command will codeblock any ccs that are 2k+ characters long to make it more visible
 */}}
-{{$true := false}}
-{{if .CmdArgs}}
-	{{$true := true}}
-	{{$cc := ""}}
-	{{$color := "txt"}}
-	{{if reFind "-color" .StrippedMsg}}
-		{{$color = "go"}}
-	{{end}}
-	{{if reFind "-file" .StrippedMsg}}
-		{{$cc = exec "cc" (reReplace `\s*-(?:file|color)\s*` .StrippedMsg "")}}
-		{{$true = false}}
-	{{else if reFind "-color" .StrippedMsg}}
-		{{$cc = exec "cc" (reReplace `\s*-(?:file|color)\s*` .StrippedMsg "")}}
-	{{else}}
-		{{$cc = exec "cc" .StrippedMsg}}
-	{{end}}
-	{{if not (reFind `\A(No id or trigger provided, here is a list of all server commands\:|No command by that name or id found, here is a list of them all\:|More than 1 matched command)` $cc)}}
-		{{if $true}}
-			{{$c := split $cc "\n"}}
-			{{$code := len $c|add -1|slice $c 2|joinStr "\n"}}
-			{{$count := split $code ""}}
-			{{$lines := split $code "\n"}}
-			{{$mcount := fdiv (len $count) 1950|roundCeil|toInt}}
-			{{$msg := cslice}}
-			{{if not (reFind "```" $code)}}
-				{{if ge $mcount 2}}
-					{{$curr := 0}}
-					{{$lcurr := 0}}
-					{{$old := 0}}
-					{{$current := 0}}
-					{{range seq 0 (add $mcount 5)}}
-						{{- $curr = add $current 1950}}
-						{{- $next := 0}}
-						{{- if ge $curr (len $count)}}
-							{{- $curr = len $count}}
-							{{- $next = 1}}
+{{$highlights := cslice "asciidoc"
+"autohotkey"
+"bash"
+"coffeescript"
+"cpp"
+"cs"
+"css"
+"diff"
+"fix"
+"glsl"
+"ini"
+"json"
+"md"
+"ml"
+"prolog"
+"py"
+"xl"
+"xml"
+"go"
+"txt"}}
+{{$cmd := .Cmd|lower}}
+{{if reFind `-c(?:ustom)?c(?:ommands)?` $cmd}}
+	{{$true := false}}
+	{{if .CmdArgs}}
+		{{$true := true}}
+		{{$cc := ""}}
+		{{$txt := .StrippedMsg}}
+		{{$highlight := or (dbGet 0 "serverhighlight").Value "txt"}}
+		{{with reFindAllSubmatches `\A((?:.|[\r\n])*)(-color\s*(\w+)\s*)(\s(?:.|[\r\n])*)?\z` $txt}}
+			{{$txt =print (index . 0 1) (index . 0 4)}}
+			{{if in $highlights (index . 0 3)}}
+				{{$highlight = index . 0 3}}
+			{{else}}
+				{{$highlight = "go"}}
+				{{$txt = print (index . 0 1) (index . 0 3) (index . 0 4)}}
+			{{end}}
+		{{end}}
+		{{if reFind "-file" $txt}}
+			{{$true = false}}
+		{{end}}
+		{{$cc = exec "cc" (reReplace `\s*-file\s*` $txt "")}}
+		{{if not (reFind `\A(No id or trigger provided, here is a list of all server commands\:|No command by that name or id found, here is a list of them all\:|More than 1 matched command)` $cc)}}
+			{{if $true}}
+				{{$c := split $cc "\n"}}
+				{{$code := len $c|add -1|slice $c 2|joinStr "\n"}}
+				{{$count := split $code ""}}
+				{{$lines := split $code "\n"}}
+				{{$mcount := fdiv (len $count) 1950|roundCeil|toInt}}
+				{{$msg := cslice}}
+				{{if not (reFind "```" $code)}}
+					{{if ge $mcount 2}}
+						{{$curr := 0}}
+						{{$lcurr := 0}}
+						{{$old := 0}}
+						{{$current := 0}}
+						{{range seq 0 (add $mcount 5)}}
+							{{- $curr = add $current 1950}}
+							{{- $next := 0}}
+							{{- if ge $curr (len $count)}}
+								{{- $curr = len $count}}
+								{{- $next = 1}}
+							{{- end}}
+							{{- if ne $curr $old}}
+								{{- $line := slice $count $old $curr|joinStr ""|reFindAll `\n`|len}}
+								{{- $next = add $lcurr $line $next}}
+								{{- $msgs := $next|slice $lines $lcurr|joinStr "\n"}}
+								{{- $msg = $msg.Append $msgs}}
+								{{- $current = split $msgs ""|len|add $current}}
+								{{- $old = $curr}}
+								{{- $lcurr = add $lcurr $line}}
+							{{- end}}
 						{{- end}}
-						{{- if ne $curr $old}}
-							{{- $line := slice $count $old $curr|joinStr ""|reFindAll `\n`|len}}
-							{{- $next = add $lcurr $line $next}}
-							{{- $msgs := $next|slice $lines $lcurr|joinStr "\n"}}
-							{{- $msg = $msg.Append $msgs}}
-							{{- $current = split $msgs ""|len|add $current}}
-							{{- $old = $curr}}
-							{{- $lcurr = add $lcurr $line}}
-						{{- end}}
+					{{else}}
+						{{$msg = joinStr "\n" $lines|$msg.Append}}
+					{{end}}
+					{{slice $c 0 1|joinStr ""|sendMessage nil}}
+					{{range $msg}}
+						{{- printf "```%s\n%s\n```" $highlight .|sendMessage nil}}
 					{{- end}}
 				{{else}}
-					{{$msg = joinStr "\n" $lines|$msg.Append}}
+					{{$cc|complexMessage "content" "Illegal Characters found. Use this preview file instead" "file"|sendMessage nil}}
 				{{end}}
-				{{slice $c 0 1|joinStr ""|sendMessage nil}}
-				{{range $msg}}
-					{{- printf "```%s\n%s\n```" $color .|sendMessage nil}}
-				{{- end}}
 			{{else}}
-				{{$cc|complexMessage "content" "Illegal Characters found. Use this preview file instead" "file"|sendMessage nil}}
+				{{$c := split $cc "\n"}}
+				{{sendMessage nil (complexMessage "content" (slice $c 0 1|joinStr "") "file" (len $c|add -1|slice $c 2|joinStr "\n"))}}
 			{{end}}
 		{{else}}
-			{{$c := split $cc "\n"}}
-			{{sendMessage nil (complexMessage "content" (slice $c 0 1|joinStr "") "file" (len $c|add -1|slice $c 2|joinStr "\n"))}}
+			{{$true = true}}
 		{{end}}
 	{{else}}
 		{{$true = true}}
 	{{end}}
-{{else}}
-	{{$true = true}}
-{{end}}
-{{/* slice (split $cc "\n") 1|joinStr "\n"|sendMessage nil */}}
-{{if $true}}
-	{{$l := split (exec "cc") "\n"}}
-	{{$list := slice $l 1|joinStr "\n"}}
-	{{$total := split $list ""}}
-	{{$ltotal := split $list "\n"}}
-	{{$ttotal := fdiv (len $total) 1950|roundCeil|toInt}}
-	{{$msg := cslice}}
-	{{if ge $ttotal 2}}
-		{{$curr := 0}}
-		{{$lcurr := 0}}
-		{{$old := 0}}
-		{{$current := 0}}
-		{{range seq 0 (add $ttotal 5)}}
-			{{- $curr = add $current 1950}}
-			{{- $next := 0}}
-			{{- if ge $curr (len $total)}}
-				{{- $curr = len $total}}
-				{{- $next = 1}}
+	{{if $true}}
+		{{$l := split (exec "cc") "\n"}}
+		{{$list := slice $l 1|joinStr "\n"}}
+		{{$total := split $list ""}}
+		{{$ltotal := split $list "\n"}}
+		{{$ttotal := fdiv (len $total) 1950|roundCeil|toInt}}
+		{{$msg := cslice}}
+		{{if ge $ttotal 2}}
+			{{$curr := 0}}
+			{{$lcurr := 0}}
+			{{$old := 0}}
+			{{$current := 0}}
+			{{range seq 0 (add $ttotal 5)}}
+				{{- $curr = add $current 1950}}
+				{{- $next := 0}}
+				{{- if ge $curr (len $total)}}
+					{{- $curr = len $total}}
+					{{- $next = 1}}
+				{{- end}}
+				{{- if ne $curr $old}}
+					{{- $line := slice $total $old $curr|joinStr ""|reFindAll `\n`|len}}
+					{{- $next = add $lcurr $line $next}}
+					{{- $msgs := $next|slice $ltotal $lcurr|joinStr "\n"}}
+					{{- $msg = $msg.Append $msgs}}
+					{{- $current = split $msgs ""|len|add $current}}
+					{{- $old = $curr}}
+					{{- $lcurr = add $lcurr $line}}
+				{{- end}}
 			{{- end}}
-			{{- if ne $curr $old}}
-				{{- $line := slice $total $old $curr|joinStr ""|reFindAll `\n`|len}}
-				{{- $next = add $lcurr $line $next}}
-				{{- $msgs := $next|slice $ltotal $lcurr|joinStr "\n"}}
-				{{- $msg = $msg.Append $msgs}}
-				{{- $current = split $msgs ""|len|add $current}}
-				{{- $old = $curr}}
-				{{- $lcurr = add $lcurr $line}}
-			{{- end}}
+		{{else}}
+			{{$msg = joinStr "\n" $l|$msg.Append}}
+		{{end}}
+		{{range $msg}}
+			{{- sendMessage nil .}}
 		{{- end}}
-	{{else}}
-		{{$msg = joinStr "\n" $l|$msg.Append}}
 	{{end}}
-	{{range $msg}}
-		{{- sendMessage nil .}}
-	{{- end}}
+{{else if reFind `s(erver)?h(ighlight)?` $cmd}}
+	{{$embed := sdict "color" 16711680 "author" (sdict "name" "Error 404" "icon_url" (.User.AvatarURL "1024"))}}
+	{{if .CmdArgs}}
+		{{$highlighting := index .CmdArgs 0|lower}}
+		{{if in $highlights $highlighting}}
+			{{dbSet 0 "serverhighlight" $highlighting}}
+			{{sendMessage nil (cembed "color" 1441536 
+		"description" (print "Successfully Set Your Server's Default Discrod Syntax Highlight for the CC command into: " $highlighting "\n" "Here is an example of what your code will look like:\n```" $highlighting "\n{{$sdict := sdict \"text\" 123 \"test2\" 321}}\n{{$slice := cslice \"1\" \"2\" \"3\" \"4\" \"5\"}}\n{{range $sdict}}\n\t{{- if not (and (or ($sdict.Get (index $.CmdArgs 0)) (in $slice (index $.CmdArgs 0))) true)}}\n\t\t{{- sendMessage nil (print \"Just an example hehe\\n\" .)}}\n\t{{- end}}\n{{- end}}\n```") 
+			"author" (sdict "name" "Success!" "icon_url" (.User.AvatarURL "1024")))}}
+		{{else}}
+			{{$msg := ""}}
+			{{range $highlights}}
+				{{$msg = print $msg ", " .}}
+			{{end}}
+			{{$msg = reReplace `\A, ` $msg ""}}
+			{{$embed.Set "title" "Incorrect Discord Syntax Highlighting"}}
+			{{$embed.Set "description" (print "Use one of these Discord Syntax Highlighting: " $msg)}}
+			{{sendMessage nil (cembed $embed)}}
+		{{end}}
+	{{else}}
+		{{$embed.Set "description" "Provide a Discord Syntax Highlight"}}
+		{{sendMessage nil (cembed $embed)}}
+	{{end}}
 {{end}}
