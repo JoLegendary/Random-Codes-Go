@@ -134,7 +134,7 @@
 				{{- end}}
 			{{- end}}
 		{{else}}
-			{{$msg = joinStr "\n" $l|$msg.Append}}
+			{{$msg = $msg.Append $list}}
 		{{end}}
 		{{range $msg}}
 			{{- sendMessage nil .}}
