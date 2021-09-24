@@ -1,0 +1,36 @@
+{{/* 
+    MIT License
+
+    Copyright (c) 2021 JoLegendary
+    All rights reserved.
+	
+	Trigger Type: Command
+	Trigger: sh
+	Usage: -sh <Syntax>
+	
+	Another extension to the Main Code
+	This code will set the default Discord Highlighting Syntax for the Main Code as to the available Syntax you choose
+*/}}
+{{$highlights := cslice "asciidoc" "autohotkey" "bash" "coffeescript" "cpp" "cs" "css" "diff" "fix" "glsl" "ini" "json" "md" "ml" "prolog" "py" "xl" "xml" "go" "txt"}}
+{{$embed := sdict "color" 16711680 "author" (sdict "name" "Error 404" "icon_url" (.User.AvatarURL "1024"))}}
+{{if .CmdArgs}}
+	{{$highlighting := index .CmdArgs 0|lower}}
+	{{if in $highlights $highlighting}}
+		{{dbSet 0 "serverhighlight" $highlighting}}
+		{{sendMessage nil (cembed "color" 1441536 
+	"description" (print "Successfully Set Your Server's Default Discrod Syntax Highlight for the CC command into: " $highlighting "\n" "Here is an example of what your code will look like:\n```" $highlighting "\n{{$sdict := sdict \"text\" 123 \"test2\" 321}}\n{{$slice := cslice \"1\" \"2\" \"3\" \"4\" \"5\"}}\n{{range $sdict}}\n\t{{- if not (and (or ($sdict.Get (index $.CmdArgs 0)) (in $slice (index $.CmdArgs 0))) true)}}\n\t\t{{- sendMessage nil (print \"Just an example hehe\\n\" .)}}\n\t{{- end}}\n{{- end}}\n```") 
+		"author" (sdict "name" "Success!" "icon_url" (.User.AvatarURL "1024")))}}
+	{{else}}
+		{{$msg := ""}}
+		{{range $highlights}}
+			{{$msg = print $msg ", " .}}
+		{{end}}
+		{{$msg = reReplace `\A, ` $msg ""}}
+		{{$embed.Set "title" "Incorrect Discord Syntax Highlighting"}}
+		{{$embed.Set "description" (print "Use one of these Discord Syntax Highlighting: " $msg)}}
+		{{sendMessage nil (cembed $embed)}}
+	{{end}}
+{{else}}
+	{{$embed.Set "description" "Provide a Discord Syntax Highlight"}}
+	{{sendMessage nil (cembed $embed)}}
+{{end}}
