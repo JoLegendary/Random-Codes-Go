@@ -1,0 +1,192 @@
+{{/*
+	MIT License
+
+	Copyright (c) 2021 JoLegendary
+	All rights reserved.
+	
+	Copyright (c): Black Wolf, 2021
+	License: MIT
+	Repository: https://github.com/TheHDCrafter/yagpdb-cc/
+	
+	Trigger Type: Command
+	Trigger: cc
+	Usage: -cc/-cc <CCID/Trigger/Name>/-cc type <Regex/Command/Exact Match/.......>/-cc group <Group Name>/-cc page <Number>
+	
+	Important Note: You have to override the built-in cc command in the control panel
+	
+	This command will codeblock any ccs that are 2k+ characters long to make it more visible
+	and embed the cc list from -cc which is part of the code from https://github.com/BlackWolfWoof/yagpdb-cc/blob/master/CustomCommands_Replacement/command.yag 
+	made by Black Wolf <https://github.com/BlackWolfWoof>
+*/}}
+{{$highlights := cslice "asciidoc" "autohotkey" "bash" "coffeescript" "cpp" "cs" "css" "diff" "fix" "glsl" "ini" "json" "md" "ml" "prolog" "py" "xl" "xml" "go" "txt"}}
+{{$prefix := index (split .Cmd "") 0}}
+{{$page := 1}}
+{{$grab := ""}}
+{{$max := 0}}
+{{$sdict := sdict}}
+{{$group := false}}
+{{$type := false}}
+{{$trigger := false}}
+{{$out := ""}}
+{{$true := false}}
+{{with .StrippedMsg}}
+	{{$trigger = true}}
+	{{with (reFindAllSubmatches `(?i)page (\d+)` .)}}
+		{{$page = toInt (index . 0 1)}}
+		{{$trigger = false}}
+	{{end}}
+	{{with (reFindAllSubmatches `(?i)group (.+)` .)}}
+		{{$group = index . 0 1}}
+		{{$trigger = false}}
+	{{end}}
+	{{with (reFindAllSubmatches `(?i)(?:type|trigger type) (None|n|Command|cmd?|Starts with|sw?|Contains|con?|Regex|reg|Exact Match|em?|Reaction|reac?t?|Interval|int|iv)` .)}}
+		{{$t2 := lower (index . 0 1)}}
+		{{$trigger = false}}
+		{{if eq $t2 "none" "n"}}
+			{{$type = "None"}}
+		{{end}}
+		{{if eq $t2 "command" "cm" "cmd"}}
+			{{$type = "Command"}}
+		{{end}}
+		{{if eq $t2 "starts with" "s" "sw"}}
+			{{$type = "Starts With"}}
+		{{end}}
+		{{if eq $t2 "contains" "co" "con"}}
+			{{$type = "Contains"}}
+		{{end}}
+		{{if eq $t2 "regex" "reg"}}
+			{{$type = "Regex"}}
+		{{end}}
+		{{if eq $t2 "exact match" "exact" "e" "em"}}
+			{{$type = "Exact"}}
+		{{end}}
+		{{if eq $t2 "reaction" "rea" "reac" "react"}}
+			{{$type = "Reaction"}}
+		{{end}}
+		{{if eq $t2 "interval" "int" "iv" "i"}}
+			{{$type = "Interval"}}
+		{{end}}
+	{{end}}
+{{end}}
+{{/*Guild Icon*/}}
+{{$ex := or (and (reFind "a_" .Guild.Icon) "gif") "png"}}
+{{$icon := print "https://cdn.discordapp.com/icons/" .Guild.ID "/" .Guild.Icon "." $ex "?size=1024"}}
+{{/*Splitting exec cc output and filtering / compiling output*/}}
+{{if $trigger}}
+	{{$file := true}}
+	{{$cc := ""}}
+	{{$txt := .StrippedMsg}}
+	{{$highlight := or (dbGet 0 "serverhighlight").Value "txt"}}
+	{{with reFindAllSubmatches `\A((?:.|[\r\n])*)?(-color\s*(\w+)?\s*)(\s(?:.|[\r\n])*)?\z` $txt}}
+		{{range (index . 0)}}
+		{{end}}
+		{{$txt = print (index . 0 1) (index . 0 4)}}
+		{{if in $highlights (index . 0 3)}}
+			{{$highlight = index . 0 3}}
+		{{else}}
+			{{$highlight = "go"}}
+			{{$txt = print (index . 0 1) (index . 0 3) (index . 0 4)}}
+		{{end}}
+	{{end}}
+	{{if reFind "-file" $txt}}
+		{{$file = false}}
+	{{end}}
+	{{$cc = exec "cc" (reReplace `\s*(?:-(?:file|color))?\s*` $txt "")}}
+	{{if not (reFind `\A(No id or trigger provided, here is a list of all server commands\:|No command by that name or id found, here is a list of them all\:|More than 1 matched command)` $cc)}}
+		{{if $file}}
+			{{$c := split $cc "\n"}}
+			{{$code := len $c|add -1|slice $c 2|joinStr "\n"}}
+			{{$count := split $code ""}}
+			{{$lines := split $code "\n"}}
+			{{$mcount := fdiv (len $count) 1950|roundCeil|toInt}}
+			{{$msg := cslice}}
+			{{if not (reFind "```" $code)}}
+				{{if ge $mcount 2}}
+					{{$curr := 0}}
+					{{$lcurr := 0}}
+					{{$old := 0}}
+					{{$current := 0}}
+					{{range seq 0 (add $mcount 5)}}
+						{{- $curr = add $current 1950}}
+						{{- $next := 0}}
+						{{- if ge $curr (len $count)}}
+							{{- $curr = len $count}}
+							{{- $next = 1}}
+						{{- end}}
+						{{- if ne $curr $old}}
+							{{- $line := slice $count $old $curr|joinStr ""|reFindAll `\n`|len}}
+							{{- $next = add $lcurr $line $next}}
+							{{- $msgs := $next|slice $lines $lcurr|joinStr "\n"}}
+							{{- $msg = $msg.Append $msgs}}
+							{{- $current = split $msgs ""|len|add $current}}
+							{{- $old = $curr}}
+							{{- $lcurr = add $lcurr $line}}
+						{{- end}}
+					{{- end}}
+				{{else}}
+					{{$msg = joinStr "\n" $lines|$msg.Append}}
+				{{end}}
+				{{slice $c 0 1|joinStr ""|sendMessage nil}}
+				{{range $msg}}
+					{{- printf "```%s\n%s\n```" $highlight .|sendMessage nil}}
+				{{- end}}
+			{{else}}
+				{{$cc|complexMessage "content" "Illegal Characters found. Use this preview file instead" "file"|sendMessage nil}}
+			{{end}}
+		{{else}}
+			{{$c := split $cc "\n"}}
+			{{sendMessage nil (complexMessage "content" (slice $c 0 1|joinStr "") "file" (len $c|add -1|slice $c 2|joinStr "\n"))}}
+		{{end}}
+	{{else}}
+		{{$true = true}}
+	{{end}}
+{{else}}
+	{{$true = true}}
+{{end}}
+{{if $true}}
+	{{range (split (exec "cc") "\n`#")}}
+		{{- range (reFindAllSubmatches `\s*(\d+):\x60 (?:\x60(.+)\x60: )?(.*) - Group: \x60(.+)\x60` .) -}}
+			{{- $out = ""}}
+			{{$t4 := ""}}
+			{{if ne (index . 2) ""}}
+				{{$t4 = "`"}}
+			{{end -}}
+			{{- $t1 := print "<:cc_ID:780036580592189460>ID: **[" (index . 1) "](https://yagpdb.xyz/manage/" $.Guild.ID "/customcommands/commands/" (index . 1) "/)**\n<:sendmessage:704342789172887672>Trigger: " $t4 (or (index . 2) "<:cross:705738821110595607>") $t4 "\n<:cc_triggertype:779859347365822505>Trigger Type: **" (or (index . 3) "<:cross:705738821110595607>") "**\n<:cc_group:779859070122721320>Group: **" (index . 4) "**\n\n" -}}
+			{{- if $group -}}
+				{{- if eq (lower (index . 4)) (lower $group) -}}
+					{{- $out = $t1 -}}
+				{{- end -}}
+			{{- else if $type -}}
+				{{- if eq (or (index . 3) "None") $type -}}
+					{{- $out = $t1 -}}
+				{{- end -}}
+			{{- else -}}
+				{{- $out = $t1 -}}
+			{{- end -}}
+			{{- if ge (add (len $grab) (len $out)) 2000 -}}
+				{{- $max = add $max 1 -}}
+				{{- $sdict.Set (str $max) $grab -}}
+				{{- $grab = $out -}}
+			{{- else -}}
+				{{- $grab = print $grab $out -}}
+			{{- end -}}
+		{{- end -}}
+	{{end}}
+	{{$max = add $max 1}}
+	{{$sdict.Set (str $max) $grab}}
+	{{$ccc := 100}}
+	{{if .IsPremium}}
+		{{$ccc = 250}}
+	{{end}}
+	{{/*Output*/}}
+	{{$id := sendMessageRetID nil (cembed "thumbnail" (sdict "url" (print $icon (reReplace `\s` (print "?type=" $type "?group=" $group "?page=" $page "?max=" $max) `%20`))) "author" (sdict "name" (print "Custom Commands - " .Guild.Name) "icon_url" "https://cdn.discordapp.com/emojis/780080308820901919.png" "url" (print "https://yagpdb.xyz/manage/" .Guild.ID "/customcommands/")) "description" ($sdict.Get (str $page)) "color" 7864168 "footer" (sdict "text" (print "Page: " $page "/" $max)) "fields" (cslice (sdict "name" "**• More Info**" "value" (print "Usage:\n" $prefix "cc page <Number>\n" $prefix "cc group <GroupName>\n" $prefix "cc type <Regex/cmd...>\n\nCustom Commands: **" (sub (len (split (exec "cc") "\n`#")) 1) "/" $ccc "**"))))}}
+	{{if and (ne $page $max) (eq $page 1)}}
+		{{addMessageReactions nil $id "blank:656125423247425557" "▶️"}}
+	{{end}}
+	{{if and (ne $page 1) (eq $page $max)}}
+		{{addMessageReactions nil $id "◀️" "blank:656125423247425557"}}
+	{{end}}
+	{{if and (ne $page $max) (ne $page 1)}}
+		{{addMessageReactions nil $id "◀️" "▶️"}}
+	{{end}}
+{{end}}
