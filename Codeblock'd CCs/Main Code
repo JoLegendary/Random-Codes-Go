@@ -10,7 +10,8 @@
 	
 	Trigger Type: Command
 	Trigger: cc
-	Usage: -cc/-cc <CCID/Trigger/Name>/-cc type <Regex/Command/Exact Match/.......>/-cc group <Group Name>/-cc page <Number>
+	Usage: -cc/-cc <CCID/Trigger/Name> [-file/-color <Discord Syntax Highlighting>]/-cc type <Regex/Command/Exact Match/.......>/-cc group <Group Name>/-cc page <Number>
+	Legends: [] optional, <> necessary
 	
 	Important Note: You have to override the built-in cc command in the control panel
 	
