@@ -1,7 +1,7 @@
 # Codeblock Custom Commands
 These sets of Custom Commands will replace the built-in `customcommands` or `cc`
-
 *Previews of custom command*
+
 ![Preview1](https://imgur.com/B1ke9k5.png)
 ![Preview2](https://imgur.com/NuwPBUC.png)
 ![Preview3](https://imgur.com/IeIlwze.png)
